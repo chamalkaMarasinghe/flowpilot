@@ -1,0 +1,67 @@
+import type { User } from "@/types";
+
+export const mockUsers: User[] = [
+  {
+    id: "u1",
+    fullName: "Alex Admin",
+    email: "admin@flowpilot.com",
+    role: "ADMIN",
+    status: "ACTIVE",
+    jobTitle: "Platform Admin",
+    department: "Operations",
+    createdAt: "2024-01-15T10:00:00Z",
+    updatedAt: "2024-06-01T10:00:00Z",
+  },
+  {
+    id: "u2",
+    fullName: "John User",
+    email: "user@flowpilot.com",
+    role: "USER",
+    status: "ACTIVE",
+    jobTitle: "Frontend Engineer",
+    department: "Engineering",
+    createdAt: "2024-02-10T10:00:00Z",
+    updatedAt: "2024-06-01T10:00:00Z",
+  },
+  {
+    id: "u3",
+    fullName: "Jane Doe",
+    email: "jane@flowpilot.com",
+    role: "USER",
+    status: "ACTIVE",
+    jobTitle: "Product Designer",
+    department: "Design",
+    createdAt: "2024-03-05T10:00:00Z",
+    updatedAt: "2024-06-01T10:00:00Z",
+  },
+  {
+    id: "u4",
+    fullName: "Mark Lee",
+    email: "mark@flowpilot.com",
+    role: "USER",
+    status: "INACTIVE",
+    jobTitle: "QA Engineer",
+    department: "Engineering",
+    createdAt: "2024-04-12T10:00:00Z",
+    updatedAt: "2024-06-01T10:00:00Z",
+  },
+  {
+    id: "u5",
+    fullName: "Sara Kim",
+    email: "sara@flowpilot.com",
+    role: "USER",
+    status: "ACTIVE",
+    jobTitle: "Backend Engineer",
+    department: "Engineering",
+    createdAt: "2024-05-20T10:00:00Z",
+    updatedAt: "2024-06-01T10:00:00Z",
+  },
+];
+
+export const mockCredentials: Record<string, string> = {
+  "admin@flowpilot.com": "Admin@123",
+  "user@flowpilot.com": "User@123",
+  "jane@flowpilot.com": "User@123",
+  "mark@flowpilot.com": "User@123",
+  "sara@flowpilot.com": "User@123",
+};

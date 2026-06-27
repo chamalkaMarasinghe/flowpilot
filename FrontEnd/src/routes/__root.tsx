@@ -14,7 +14,9 @@ import appCss from "../styles.css?url";
 import { store } from "@/app/store";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Toaster } from "@/components/ui/sonner";
-import { hydrateFromStorage } from "@/features/auth/authSlice";
+import { logout } from "@/features/auth/authSlice";
+import { hydrateSession } from "@/features/auth/authThunks";
+import { setUnauthorizedHandler } from "@/services/apiClient";
 
 function NotFoundComponent() {
   return (
@@ -123,7 +125,11 @@ function AuthHydrator({ children }: { children: ReactNode }) {
   const hydrated = useAppSelector((s) => s.auth.hydrated);
 
   useEffect(() => {
-    dispatch(hydrateFromStorage());
+    setUnauthorizedHandler(() => {
+      dispatch(logout());
+    });
+    void dispatch(hydrateSession());
+    return () => setUnauthorizedHandler(null);
   }, [dispatch]);
 
   if (!hydrated) return null;

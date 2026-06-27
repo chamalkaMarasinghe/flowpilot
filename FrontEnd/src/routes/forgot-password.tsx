@@ -4,7 +4,8 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { authService } from "@/services/authService";
+import { useAppDispatch } from "@/app/hooks";
+import { forgotPassword } from "@/features/auth/authThunks";
 import { toast } from "sonner";
 import { isEmail } from "@/utils/validationUtils";
 
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/forgot-password")({
 });
 
 function ForgotPage() {
+  const dispatch = useAppDispatch();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,9 +30,9 @@ function ForgotPage() {
     }
     setLoading(true);
     try {
-      await authService.forgotPassword(email);
+      await dispatch(forgotPassword(email)).unwrap();
       setSent(true);
-      toast.success("Reset link sent (mock)");
+      toast.success("Reset link sent if the account exists");
     } catch (err) {
       setError((err as Error).message);
     } finally {

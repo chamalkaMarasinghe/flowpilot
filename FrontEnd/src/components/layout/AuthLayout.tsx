@@ -5,6 +5,8 @@ import { Logo } from "@/components/common/Logo";
 
 export function AuthLayout({ children, title, subtitle }: { children: ReactNode; title: string; subtitle?: string }) {
   const user = useAppSelector((s) => s.auth.user);
+  const hydrated = useAppSelector((s) => s.auth.hydrated);
+  if (!hydrated) return null;
   if (user) return <Navigate to="/dashboard" />;
 
   return (

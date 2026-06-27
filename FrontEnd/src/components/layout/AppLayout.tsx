@@ -14,7 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { logout } from "@/features/auth/authSlice";
+import { logoutUser } from "@/features/auth/authThunks";
 import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,9 +63,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, [location.pathname]);
 
   const onLogout = () => {
-    dispatch(logout());
-    toast.success("Signed out");
-    navigate({ to: "/login" });
+    void dispatch(logoutUser()).then(() => {
+      toast.success("Signed out");
+      navigate({ to: "/login" });
+    });
   };
 
   const initials = (user?.fullName ?? "U")

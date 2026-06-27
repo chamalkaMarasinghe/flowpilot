@@ -1,19 +1,10 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { AuthUser } from "@/types";
+import { setToken } from "@/services/apiClient";
 import type { AuthState } from "./authTypes";
-import { loginUser, registerUser } from "./authThunks";
+import { hydrateSession, loginUser, logoutUser, registerUser } from "./authThunks";
 
 const STORAGE_KEY = "flowpilot.auth.user";
-
-function loadUser(): AuthUser | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
-  } catch {
-    return null;
-  }
-}
 
 function persist(user: AuthUser | null) {
   if (typeof window === "undefined") return;
@@ -32,14 +23,12 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    hydrateFromStorage(state) {
-      state.user = loadUser();
-      state.hydrated = true;
-    },
     logout(state) {
       state.user = null;
       state.hydrated = true;
+      state.error = null;
       persist(null);
+      setToken(null);
     },
     setUser(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
@@ -51,6 +40,23 @@ const authSlice = createSlice({
     },
   },
   extraReducers: (b) => {
+    b.addCase(hydrateSession.pending, (s) => {
+      s.loading = true;
+    });
+    b.addCase(hydrateSession.fulfilled, (s, a) => {
+      s.loading = false;
+      s.user = a.payload;
+      s.hydrated = true;
+      persist(a.payload);
+    });
+    b.addCase(hydrateSession.rejected, (s) => {
+      s.loading = false;
+      s.user = null;
+      s.hydrated = true;
+      persist(null);
+      setToken(null);
+    });
+
     b.addCase(loginUser.pending, (s) => {
       s.loading = true;
       s.error = null;
@@ -65,6 +71,7 @@ const authSlice = createSlice({
       s.loading = false;
       s.error = (a.payload as string) ?? a.error.message ?? "Login failed";
     });
+
     b.addCase(registerUser.pending, (s) => {
       s.loading = true;
       s.error = null;
@@ -79,8 +86,16 @@ const authSlice = createSlice({
       s.loading = false;
       s.error = (a.payload as string) ?? a.error.message ?? "Register failed";
     });
+
+    b.addCase(logoutUser.fulfilled, (s) => {
+      s.user = null;
+      s.hydrated = true;
+      s.error = null;
+      persist(null);
+      setToken(null);
+    });
   },
 });
 
-export const { hydrateFromStorage, logout, setUser, clearError } = authSlice.actions;
+export const { logout, setUser, clearError } = authSlice.actions;
 export default authSlice.reducer;

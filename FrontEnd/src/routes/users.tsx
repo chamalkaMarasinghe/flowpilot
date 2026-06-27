@@ -14,10 +14,22 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRoleBadge } from "@/components/users/UserRoleBadge";
 import { UserStatusBadge } from "@/components/users/UserStatusBadge";
 import { Switch } from "@/components/ui/switch";
-import { setUserRole, setUserStatus } from "@/features/users/userThunks";
+import { Button } from "@/components/ui/button";
+import { deleteUser, setUserRole, setUserStatus } from "@/features/users/userThunks";
+import { fetchTasks } from "@/features/tasks/taskThunks";
 import { toast } from "sonner";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import type { UserRole } from "@/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/users")({
   head: () => ({ meta: [{ title: "Users — FlowPilot" }] }),
@@ -30,10 +42,12 @@ export const Route = createFileRoute("/users")({
 
 function UsersPage() {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((s) => s.auth.user)!;
   const users = useAppSelector((s) => s.users.items);
   const [q, setQ] = useState("");
   const [role, setRole] = useState<"ALL" | UserRole>("ALL");
   const [status, setStatus] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -46,6 +60,18 @@ function UsersPage() {
       return true;
     });
   }, [users, q, role, status]);
+
+  const onDelete = async () => {
+    if (!confirmDeleteId) return;
+    try {
+      await dispatch(deleteUser(confirmDeleteId)).unwrap();
+      void dispatch(fetchTasks());
+      toast.success("User deleted");
+      setConfirmDeleteId(null);
+    } catch (err) {
+      toast.error((err as string) ?? "Failed to delete user");
+    }
+  };
 
   return (
     <>
@@ -83,11 +109,13 @@ function UsersPage() {
               <TableHead>Status</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Active</TableHead>
+              <TableHead className="w-[80px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map((u) => {
               const initials = u.fullName.split(" ").map((p) => p[0]).slice(0, 2).join("");
+              const isSelf = u.id === currentUser.id;
               return (
                 <TableRow key={u.id}>
                   <TableCell>
@@ -104,9 +132,14 @@ function UsersPage() {
                   <TableCell>
                     <Select
                       value={u.role}
+                      disabled={isSelf}
                       onValueChange={async (v) => {
-                        await dispatch(setUserRole({ id: u.id, role: v as UserRole }));
-                        toast.success("Role updated");
+                        try {
+                          await dispatch(setUserRole({ id: u.id, role: v as UserRole })).unwrap();
+                          toast.success("Role updated");
+                        } catch (err) {
+                          toast.error((err as string) ?? "Failed to update role");
+                        }
                       }}
                     >
                       <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
@@ -121,18 +154,38 @@ function UsersPage() {
                   <TableCell>
                     <Switch
                       checked={u.status === "ACTIVE"}
+                      disabled={isSelf}
                       onCheckedChange={async (checked) => {
-                        await dispatch(setUserStatus({ id: u.id, status: checked ? "ACTIVE" : "INACTIVE" }));
-                        toast.success(checked ? "User activated" : "User deactivated");
+                        try {
+                          await dispatch(
+                            setUserStatus({ id: u.id, status: checked ? "ACTIVE" : "INACTIVE" }),
+                          ).unwrap();
+                          toast.success(checked ? "User activated" : "User deactivated");
+                        } catch (err) {
+                          toast.error((err as string) ?? "Failed to update status");
+                        }
                       }}
                     />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={isSelf}
+                      aria-label={`Delete ${u.fullName}`}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setConfirmDeleteId(u.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               );
             })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -142,9 +195,28 @@ function UsersPage() {
       </div>
 
       <div className="mt-4 hidden">
-        {/* Keep badge import used */}
         <UserRoleBadge role="ADMIN" />
       </div>
+
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(o) => !o && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the user and all tasks they created or were assigned to. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete user
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

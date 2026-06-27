@@ -72,3 +72,61 @@ export async function getMe(userId: string) {
   if (user.status === "INACTIVE") throw new AppError(403, "Account is deactivated");
   return toApiAuthUser(user);
 }
+
+const updateProfileSchema = z.object({
+  fullName: z.string().trim().min(1).optional(),
+  email: z.string().email().optional(),
+  jobTitle: z.string().trim().max(120).optional(),
+  department: z.string().trim().max(120).optional(),
+  avatarUrl: z.union([z.string().url(), z.literal("")]).optional(),
+});
+
+export async function updateProfile(userId: string, input: unknown) {
+  const data = updateProfileSchema.parse(input);
+  const user = await User.findById(userId);
+  if (!user) throw new AppError(404, "User not found");
+  if (user.status === "INACTIVE") throw new AppError(403, "Account is deactivated");
+
+  if (data.email !== undefined) {
+    const normalized = data.email.toLowerCase();
+    const existing = await User.findOne({ email: normalized, _id: { $ne: user._id } });
+    if (existing) throw new AppError(409, "Email already in use");
+    user.email = normalized;
+  }
+  if (data.fullName !== undefined) user.fullName = data.fullName;
+  if (data.jobTitle !== undefined) user.jobTitle = data.jobTitle || undefined;
+  if (data.department !== undefined) user.department = data.department || undefined;
+  if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl || undefined;
+
+  await user.save();
+  return toApiAuthUser(user);
+}
+
+const updatePreferencesSchema = z.object({
+  sidebarOpen: z.boolean().optional(),
+  tableView: z.enum(["table", "card"]).optional(),
+  theme: z.enum(["light", "dark"]).optional(),
+});
+
+export async function updatePreferences(userId: string, input: unknown) {
+  const data = updatePreferencesSchema.parse(input);
+  const user = await User.findById(userId);
+  if (!user) throw new AppError(404, "User not found");
+  if (user.status === "INACTIVE") throw new AppError(403, "Account is deactivated");
+
+  if (!user.preferences) {
+    user.preferences = {
+      sidebarOpen: true,
+      tableView: "table",
+      theme: "light",
+    };
+  }
+
+  if (data.sidebarOpen !== undefined) user.preferences.sidebarOpen = data.sidebarOpen;
+  if (data.tableView !== undefined) user.preferences.tableView = data.tableView;
+  if (data.theme !== undefined) user.preferences.theme = data.theme;
+  user.markModified("preferences");
+
+  await user.save();
+  return toApiAuthUser(user);
+}

@@ -37,4 +37,27 @@ router.patch("/:id/status", requireAdmin, userController.setStatus);
  */
 router.patch("/:id/role", requireAdmin, userController.setRole);
 
+/**
+ * @openapi
+ * /users/{id}:
+ *   delete:
+ *     tags: [Users]
+ *     summary: Permanently delete a user (admin only)
+ *     description: |
+ *       Removes the user and all tasks they created or were assigned to.
+ *       Cannot delete yourself or the last active admin.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: User deleted
+ *       400:
+ *         description: Cannot delete self or last admin
+ */
+router.delete("/:id", requireAdmin, userController.remove);
+
 export default router;

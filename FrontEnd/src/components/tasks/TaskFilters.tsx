@@ -24,7 +24,7 @@ export function TaskFilters({ filters, onChange, users }: Props) {
         <Input
           value={filters.search}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          placeholder="Search title or description…"
+          placeholder="Search by title…"
           className="pl-9"
         />
       </div>

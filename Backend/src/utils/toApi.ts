@@ -1,5 +1,6 @@
 import type { Document, Types } from "mongoose";
 import type { ApiTaskShape } from "./dashboardUtils.js";
+import { normalizePreferences, type UserPreferencesShape } from "./userPreferences.js";
 
 type WithId = { _id: Types.ObjectId };
 
@@ -28,14 +29,18 @@ export function toApiAuthUser<T extends Document & WithId>(doc: T) {
     email: string;
     role: string;
     avatarUrl?: string;
-    status?: string;
     jobTitle?: string;
     department?: string;
+    preferences?: Record<string, unknown>;
+    status?: string;
     createdAt: string;
     updatedAt: string;
   };
-  const { status: _, jobTitle: __, department: ___, createdAt: ____, updatedAt: _____, ...auth } = user;
-  return auth;
+  const { status: _, createdAt: __, updatedAt: ___, preferences, ...auth } = user;
+  return {
+    ...auth,
+    preferences: normalizePreferences(preferences as Partial<UserPreferencesShape> | undefined),
+  };
 }
 
 export function toApiTask<T extends Document & WithId>(doc: T): ApiTaskShape {

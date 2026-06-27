@@ -17,3 +17,8 @@ export const setRole = asyncHandler(async (req: Request, res: Response) => {
   const user = await userService.setUserRole(req.params.id, req.body, req.user!.id);
   sendSuccess(res, user, "User role updated");
 });
+
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  const result = await userService.deleteUser(req.params.id, req.user!.id);
+  sendSuccess(res, result, "User deleted");
+});

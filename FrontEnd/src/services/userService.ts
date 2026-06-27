@@ -19,4 +19,9 @@ export const userService = {
       body: JSON.stringify({ role }),
     });
   },
+
+  async deleteUser(id: string): Promise<string> {
+    const result = await api<{ id: string }>(`/users/${id}`, { method: "DELETE" });
+    return result.id;
+  },
 };

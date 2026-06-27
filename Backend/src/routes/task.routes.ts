@@ -17,6 +17,7 @@ router.use(authenticate);
  *       - in: query
  *         name: search
  *         schema: { type: string }
+ *         description: Case-insensitive substring match on task title only
  *       - in: query
  *         name: status
  *         schema: { type: string, enum: [OPEN, IN_PROGRESS, TESTING, DONE, ALL] }

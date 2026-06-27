@@ -84,9 +84,54 @@ async function run() {
     const token = login.body.data.token;
     const authHeaders = { Authorization: `Bearer ${token}` };
 
-    const me = await request<{ user: { email: string } }>(baseUrl, "/api/auth/me", { headers: authHeaders });
+    const me = await request<{ user: { email: string; id: string } }>(baseUrl, "/api/auth/me", { headers: authHeaders });
     if (me.status !== 200 || !me.body.success || me.body.data?.user.email !== "admin@flowpilot.com") {
       throw new Error(`Me endpoint failed: ${JSON.stringify(me.body)}`);
+    }
+
+    const profilePatch = await request<{ user: { fullName: string; jobTitle: string } }>(baseUrl, "/api/auth/me", {
+      method: "PATCH",
+      headers: authHeaders,
+      body: JSON.stringify({ fullName: "Alex Admin Updated", jobTitle: "Platform Admin", department: "Operations" }),
+    });
+    if (
+      profilePatch.status !== 200 ||
+      !profilePatch.body.success ||
+      profilePatch.body.data?.user.fullName !== "Alex Admin Updated" ||
+      profilePatch.body.data?.user.jobTitle !== "Platform Admin"
+    ) {
+      throw new Error(`Profile update failed: ${JSON.stringify(profilePatch.body)}`);
+    }
+
+    const meAfterPatch = await request<{ user: { fullName: string } }>(baseUrl, "/api/auth/me", { headers: authHeaders });
+    if (meAfterPatch.body.data?.user.fullName !== "Alex Admin Updated") {
+      throw new Error(`Profile not persisted: ${JSON.stringify(meAfterPatch.body)}`);
+    }
+
+    const prefsPatch = await request<{ user: { preferences: { theme: string; tableView: string; sidebarOpen: boolean } } }>(
+      baseUrl,
+      "/api/auth/me/preferences",
+      {
+        method: "PATCH",
+        headers: authHeaders,
+        body: JSON.stringify({ theme: "dark", tableView: "card", sidebarOpen: false }),
+      },
+    );
+    if (
+      prefsPatch.status !== 200 ||
+      !prefsPatch.body.success ||
+      prefsPatch.body.data?.user.preferences.theme !== "dark" ||
+      prefsPatch.body.data?.user.preferences.tableView !== "card" ||
+      prefsPatch.body.data?.user.preferences.sidebarOpen !== false
+    ) {
+      throw new Error(`Preferences update failed: ${JSON.stringify(prefsPatch.body)}`);
+    }
+
+    const meWithPrefs = await request<{ user: { preferences: { theme: string } } }>(baseUrl, "/api/auth/me", {
+      headers: authHeaders,
+    });
+    if (meWithPrefs.body.data?.user.preferences?.theme !== "dark") {
+      throw new Error(`Preferences not persisted on /me: ${JSON.stringify(meWithPrefs.body)}`);
     }
 
     const tasks = await request<unknown[]>(baseUrl, "/api/tasks", { headers: authHeaders });
@@ -111,6 +156,30 @@ async function run() {
     });
     if (filteredTasks.status !== 200 || !filteredTasks.body.success) {
       throw new Error(`Filtered tasks failed: ${JSON.stringify(filteredTasks.body)}`);
+    }
+
+    const searchByTitle = await request<Array<{ title: string }>>(baseUrl, "/api/search/tasks?q=Test", {
+      headers: authHeaders,
+    });
+    if (searchByTitle.status !== 200 || !searchByTitle.body.success || (searchByTitle.body.data as unknown[]).length === 0) {
+      throw new Error(`Search by title failed: ${JSON.stringify(searchByTitle.body)}`);
+    }
+
+    const searchByDesc = await request<Array<{ title: string }>>(baseUrl, "/api/search/tasks?q=Integration", {
+      headers: authHeaders,
+    });
+    const descHits = (searchByDesc.body.data as Array<{ title: string }> | undefined) ?? [];
+    if (
+      searchByDesc.status !== 200 ||
+      !searchByDesc.body.success ||
+      descHits.some((t) => t.title === "Test task")
+    ) {
+      throw new Error(`Search must not match description-only text: ${JSON.stringify(searchByDesc.body)}`);
+    }
+
+    const listSearch = await request<unknown[]>(baseUrl, "/api/tasks?search=Test", { headers: authHeaders });
+    if (listSearch.status !== 200 || !listSearch.body.success || (listSearch.body.data as unknown[]).length === 0) {
+      throw new Error(`List search by title failed: ${JSON.stringify(listSearch.body)}`);
     }
 
     const userLogin = await request<{ user: { id: string }; token: string }>(baseUrl, "/api/auth/login", {
@@ -170,6 +239,22 @@ async function run() {
       throw new Error(`Scoped tasks failed: ${JSON.stringify(scopedTasks.body)}`);
     }
 
+    const selfDelete = await request<null>(baseUrl, `/api/users/${me.body.data!.user.id}`, {
+      method: "DELETE",
+      headers: authHeaders,
+    });
+    if (selfDelete.status !== 400 || selfDelete.body.success !== false) {
+      throw new Error(`Expected 400 on self-delete: ${JSON.stringify(selfDelete.body)}`);
+    }
+
+    const deleteUserRes = await request<{ id: string }>(baseUrl, `/api/users/${creatorId}`, {
+      method: "DELETE",
+      headers: authHeaders,
+    });
+    if (deleteUserRes.status !== 200 || deleteUserRes.body.data?.id !== creatorId) {
+      throw new Error(`User delete failed: ${JSON.stringify(deleteUserRes.body)}`);
+    }
+
     const badLogin = await request<null>(baseUrl, "/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email: "admin@flowpilot.com", password: "wrong" }),
@@ -180,12 +265,16 @@ async function run() {
 
     console.log("Integration tests passed");
     console.log(`- Admin login + /me OK`);
+    console.log(`- Profile update OK`);
+    console.log(`- User preferences OK`);
     console.log(`- Tasks OK, ${tasks.body.data!.length} task(s)`);
     console.log(`- Users OK, ${users.body.data!.length} user(s)`);
     console.log(`- Dashboard OK, ${(dashboard.body.data as { summary: { totalTasks: number } }).summary.totalTasks} task(s) in summary`);
     console.log(`- Filtered tasks OK, ${(filteredTasks.body.data as unknown[]).length} OPEN task(s)`);
+    console.log(`- Task search OK (title match, not description)`);
     console.log(`- Task CRUD OK (create → patch → delete)`);
     console.log(`- User scoped tasks OK, ${(scopedTasks.body.data as unknown[]).length} task(s)`);
+    console.log(`- User delete OK (admin removed user + related tasks)`);
     console.log(`- Error envelope OK on invalid login`);
   } finally {
     server?.close();

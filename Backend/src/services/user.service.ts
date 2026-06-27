@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { z } from "zod";
+import { Task } from "../models/Task.js";
 import { User } from "../models/User.js";
 import { AppError } from "../utils/errors.js";
 import { toApiUser } from "../utils/toApi.js";
@@ -57,4 +58,24 @@ export async function setUserRole(id: string, input: unknown, actorId: string) {
   user.role = role;
   await user.save();
   return toApiUser(user);
+}
+
+export async function deleteUser(id: string, actorId: string) {
+  if (!Types.ObjectId.isValid(id)) throw new AppError(404, "User not found");
+  if (id === actorId) throw new AppError(400, "Cannot delete your own account");
+
+  const user = await User.findById(id);
+  if (!user) throw new AppError(404, "User not found");
+
+  if (user.role === "ADMIN" && user.status === "ACTIVE") {
+    const adminCount = await User.countDocuments({ role: "ADMIN", status: "ACTIVE" });
+    if (adminCount <= 1) throw new AppError(400, "Cannot delete the last active admin");
+  }
+
+  const userObjectId = new Types.ObjectId(id);
+  await Task.deleteMany({
+    $or: [{ createdBy: userObjectId }, { assignedTo: userObjectId }],
+  });
+  await user.deleteOne();
+  return { id };
 }

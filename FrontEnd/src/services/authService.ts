@@ -1,4 +1,4 @@
-import type { AuthUser, LoginRequest, RegisterRequest } from "@/types";
+import type { AuthUser, LoginRequest, RegisterRequest, UpdatePreferencesRequest, UpdateProfileRequest } from "@/types";
 import { api, setToken } from "./apiClient";
 
 interface AuthPayload {
@@ -34,6 +34,22 @@ export const authService = {
 
   async getMe(): Promise<AuthUser> {
     const { user } = await api<{ user: AuthUser }>("/auth/me");
+    return user;
+  },
+
+  async updateProfile(req: UpdateProfileRequest): Promise<AuthUser> {
+    const { user } = await api<{ user: AuthUser }>("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(req),
+    });
+    return user;
+  },
+
+  async updatePreferences(req: UpdatePreferencesRequest): Promise<AuthUser> {
+    const { user } = await api<{ user: AuthUser }>("/auth/me/preferences", {
+      method: "PATCH",
+      body: JSON.stringify(req),
+    });
     return user;
   },
 

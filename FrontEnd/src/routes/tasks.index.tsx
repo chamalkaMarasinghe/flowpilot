@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -9,6 +9,7 @@ import { TaskCard } from "@/components/tasks/TaskCard";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid, Rows3 } from "lucide-react";
 import { setTableView } from "@/features/ui/uiSlice";
+import { useUpdatePreferences } from "@/hooks/useUpdatePreferences";
 import { deleteTask } from "@/features/tasks/taskThunks";
 import { toast } from "sonner";
 import type { TaskFilters as Filters, TaskSortKey } from "@/types";
@@ -36,6 +37,9 @@ import {
 
 export const Route = createFileRoute("/tasks/")({
   head: () => ({ meta: [{ title: "Tasks — FlowPilot" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+  }),
   component: () => (
     <ProtectedLayout>
       <TasksPage />
@@ -44,6 +48,7 @@ export const Route = createFileRoute("/tasks/")({
 });
 
 function TasksPage() {
+  const { q } = Route.useSearch();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user)!;
   const allTasks = useAppSelector((s) => s.tasks.items);
@@ -51,10 +56,20 @@ function TasksPage() {
   const fetched = useAppSelector((s) => s.tasks.fetched);
   const users = useAppSelector((s) => s.users.items);
   const view = useAppSelector((s) => s.ui.tableView);
+  const savePreferences = useUpdatePreferences();
 
-  const [filters, setFilters] = useState<Filters>({ search: "", status: "ALL", priority: "ALL", assignedTo: "ALL" });
+  const [filters, setFilters] = useState<Filters>({
+    search: q ?? "",
+    status: "ALL",
+    priority: "ALL",
+    assignedTo: "ALL",
+  });
   const [sort, setSort] = useState<TaskSortKey>("dueDate");
   const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFilters((f) => ({ ...f, search: q ?? "" }));
+  }, [q]);
 
   const visible = useMemo(
     () => filterAndSortTasks(allTasks, filters, sort),
@@ -93,14 +108,20 @@ function TasksPage() {
             </Select>
             <div className="flex overflow-hidden rounded-md border">
               <button
-                onClick={() => dispatch(setTableView("table"))}
+                onClick={() => {
+                  dispatch(setTableView("table"));
+                  void savePreferences({ tableView: "table" });
+                }}
                 className={`px-3 py-2 text-sm ${view === "table" ? "bg-accent text-accent-foreground" : "hover:bg-accent"}`}
                 aria-label="Table view"
               >
                 <Rows3 className="size-4" />
               </button>
               <button
-                onClick={() => dispatch(setTableView("card"))}
+                onClick={() => {
+                  dispatch(setTableView("card"));
+                  void savePreferences({ tableView: "card" });
+                }}
                 className={`px-3 py-2 text-sm ${view === "card" ? "bg-accent text-accent-foreground" : "hover:bg-accent"}`}
                 aria-label="Card view"
               >

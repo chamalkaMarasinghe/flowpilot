@@ -23,6 +23,16 @@ export const me = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, { user }, "Session retrieved");
 });
 
+export const updateMe = asyncHandler(async (req: Request, res: Response) => {
+  const user = await authService.updateProfile(req.user!.id, req.body);
+  sendSuccess(res, { user }, "Profile updated");
+});
+
+export const updateMyPreferences = asyncHandler(async (req: Request, res: Response) => {
+  const user = await authService.updatePreferences(req.user!.id, req.body);
+  sendSuccess(res, { user }, "Preferences updated");
+});
+
 export const logout = asyncHandler(async (_req: Request, res: Response) => {
   sendSuccess(res, { ok: true }, "Logged out successfully");
 });

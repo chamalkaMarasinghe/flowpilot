@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { store } from "@/app/store";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeSync } from "@/components/theme/ThemeSync";
 import { logout } from "@/features/auth/authSlice";
 import { hydrateSession } from "@/features/auth/authThunks";
 import { setUnauthorizedHandler } from "@/services/apiClient";
@@ -112,6 +113,7 @@ function RootComponent() {
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
         <AuthHydrator>
+          <ThemeSync />
           <Outlet />
           <Toaster richColors position="top-right" />
         </AuthHydrator>

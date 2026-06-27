@@ -46,6 +46,17 @@ const options: swaggerJsdoc.Options = {
             email: { type: "string" },
             role: { type: "string", enum: ["ADMIN", "USER"] },
             avatarUrl: { type: "string" },
+            jobTitle: { type: "string" },
+            department: { type: "string" },
+            preferences: { $ref: "#/components/schemas/UserPreferences" },
+          },
+        },
+        UserPreferences: {
+          type: "object",
+          properties: {
+            sidebarOpen: { type: "boolean", default: true },
+            tableView: { type: "string", enum: ["table", "card"], default: "table" },
+            theme: { type: "string", enum: ["light", "dark"], default: "light" },
           },
         },
         LoginResponse: {

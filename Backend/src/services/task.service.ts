@@ -88,6 +88,17 @@ export async function listTasks(userId: string, role: UserRole, queryInput: unkn
   return sortTasks(filtered, query.sort);
 }
 
+const searchTasksQuerySchema = z.object({
+  q: z.string().trim().min(1).max(200),
+});
+
+export async function searchTasksByTitle(userId: string, role: UserRole, queryInput: unknown) {
+  const { q } = searchTasksQuerySchema.parse(queryInput);
+  const scoped = await getScopedTasks(userId, role);
+  const lower = q.toLowerCase();
+  return scoped.filter((t) => t.title.toLowerCase().includes(lower));
+}
+
 export async function getTask(id: string, userId: string, role: UserRole) {
   if (!Types.ObjectId.isValid(id)) throw new AppError(404, "Task not found");
   const task = await Task.findById(id);

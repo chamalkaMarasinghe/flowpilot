@@ -231,9 +231,7 @@ export function filterTasksList(
 
   if (query.search?.trim()) {
     const q = query.search.toLowerCase();
-    list = list.filter(
-      (t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q),
-    );
+    list = list.filter((t) => t.title.toLowerCase().includes(q));
   }
   if (query.status && query.status !== "ALL") {
     list = list.filter((t) => t.status === query.status);

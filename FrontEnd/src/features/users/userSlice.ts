@@ -1,13 +1,19 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { User } from "@/types";
 import type { UserState } from "./userTypes";
-import { fetchUsers, setUserRole, setUserStatus } from "./userThunks";
+import { deleteUser, fetchUsers, setUserRole, setUserStatus } from "./userThunks";
 
 const initialState: UserState = { items: [], loading: false, error: null };
 
 const userSlice = createSlice({
   name: "users",
   initialState,
-  reducers: {},
+  reducers: {
+    patchUserInList(state, action: PayloadAction<{ id: string; patch: Partial<User> }>) {
+      const i = state.items.findIndex((u) => u.id === action.payload.id);
+      if (i >= 0) Object.assign(state.items[i], action.payload.patch);
+    },
+  },
   extraReducers: (b) => {
     b.addCase(fetchUsers.pending, (s) => {
       s.loading = true;
@@ -29,7 +35,11 @@ const userSlice = createSlice({
       const i = s.items.findIndex((u) => u.id === a.payload.id);
       if (i >= 0) s.items[i] = a.payload;
     });
+    b.addCase(deleteUser.fulfilled, (s, a) => {
+      s.items = s.items.filter((u) => u.id !== a.payload);
+    });
   },
 });
 
+export const { patchUserInList } = userSlice.actions;
 export default userSlice.reducer;

@@ -29,9 +29,7 @@ export function filterAndSortTasks(
 
   if (filters.search.trim()) {
     const q = filters.search.toLowerCase();
-    list = list.filter(
-      (t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q),
-    );
+    list = list.filter((t) => t.title.toLowerCase().includes(q));
   }
   if (filters.status && filters.status !== "ALL") {
     list = list.filter((t) => t.status === filters.status);

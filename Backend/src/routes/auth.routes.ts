@@ -56,6 +56,59 @@ router.get("/me", authenticate, authController.me);
 
 /**
  * @openapi
+ * /auth/me:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Update current user profile
+ *     description: |
+ *       Update your own profile fields. Role and status cannot be changed here (admin user management endpoints apply).
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName: { type: string }
+ *               email: { type: string, format: email }
+ *               jobTitle: { type: string }
+ *               department: { type: string }
+ *               avatarUrl: { type: string, format: uri }
+ *     responses:
+ *       200:
+ *         description: Updated profile
+ *       409:
+ *         description: Email already in use
+ */
+router.patch("/me", authenticate, authController.updateMe);
+
+/**
+ * @openapi
+ * /auth/me/preferences:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Update current user workspace preferences
+ *     description: |
+ *       Persists per-user settings (sidebar default, task view, theme). Partial updates are supported.
+ *       Each user receives their own preferences on login and session hydration.
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sidebarOpen: { type: boolean, description: Sidebar expanded by default }
+ *               tableView: { type: string, enum: [table, card] }
+ *               theme: { type: string, enum: [light, dark] }
+ *     responses:
+ *       200:
+ *         description: Updated user with preferences
+ */
+router.patch("/me/preferences", authenticate, authController.updateMyPreferences);
+
+/**
+ * @openapi
  * /auth/logout:
  *   post:
  *     tags: [Auth]

@@ -20,6 +20,29 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  jobTitle?: string;
+  department?: string;
+  preferences: UserPreferences;
+}
+
+export interface UserPreferences {
+  sidebarOpen: boolean;
+  tableView: "table" | "card";
+  theme: "light" | "dark";
+}
+
+export interface UpdatePreferencesRequest {
+  sidebarOpen?: boolean;
+  tableView?: "table" | "card";
+  theme?: "light" | "dark";
+}
+
+export interface UpdateProfileRequest {
+  fullName?: string;
+  email?: string;
+  jobTitle?: string;
+  department?: string;
+  avatarUrl?: string;
 }
 
 export interface LoginRequest {
@@ -159,8 +182,7 @@ export interface TaskListQuery {
   sort?: TaskSortKey;
 }
 
-export interface UIState {
-  sidebarOpen: boolean;
-  theme: "light" | "dark";
-  tableView: "table" | "card";
+export interface UIState extends UserPreferences {
+  /** Runtime desktop sidebar visibility when collapsible mode is active. */
+  sidebarExpanded: boolean;
 }

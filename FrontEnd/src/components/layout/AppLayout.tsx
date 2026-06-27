@@ -9,14 +9,15 @@ import {
   UserCircle,
   LogOut,
   Menu,
+  PanelLeft,
+  PanelLeftClose,
   X,
-  Bell,
-  Search,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { logoutUser } from "@/features/auth/authThunks";
+import { toggleSidebarExpanded } from "@/features/ui/uiSlice";
 import { Logo } from "@/components/common/Logo";
-import { Button } from "@/components/ui/button";
+import { GlobalTaskSearch } from "@/components/search/GlobalTaskSearch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,10 +54,15 @@ const ADMIN_NAV: NavItem[] = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const user = useAppSelector((s) => s.auth.user);
+  const sidebarOpenByDefault = useAppSelector((s) => s.ui.sidebarOpen);
+  const sidebarExpanded = useAppSelector((s) => s.ui.sidebarExpanded);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const showDesktopSidebar = sidebarOpenByDefault || sidebarExpanded;
+  const isCollapsibleSidebar = !sidebarOpenByDefault;
 
   useEffect(() => {
     setMobileOpen(false);
@@ -76,10 +82,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
     .join("")
     .toUpperCase();
 
+  const onToggleDesktopSidebar = () => dispatch(toggleSidebarExpanded());
+
   const SidebarBody = (
     <>
-      <div className="flex h-16 items-center px-5">
-        <Logo />
+      <div className="flex h-16 items-center justify-between px-5">
+        <Logo to="/dashboard" />
+        {isCollapsibleSidebar && showDesktopSidebar && (
+          <button
+            type="button"
+            onClick={onToggleDesktopSidebar}
+            aria-label="Collapse sidebar"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <PanelLeftClose className="size-5" />
+          </button>
+        )}
       </div>
       <nav className="flex-1 space-y-6 px-3 py-2">
         <NavGroup label="Workspace" items={WORKSPACE_NAV} />
@@ -114,8 +132,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar - desktop */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar md:flex">
-        {SidebarBody}
+      <aside
+        className={cn(
+          "hidden shrink-0 flex-col border-r bg-sidebar transition-[width] duration-200 ease-in-out md:flex",
+          showDesktopSidebar ? "w-64" : "w-0 overflow-hidden border-r-0",
+        )}
+        aria-hidden={!showDesktopSidebar}
+      >
+        <div className={cn("flex h-full w-64 flex-col", !showDesktopSidebar && "pointer-events-none invisible")}>
+          {SidebarBody}
+        </div>
       </aside>
 
       {/* Mobile sidebar */}
@@ -151,23 +177,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <Menu className="size-5" />
           </button>
 
-          <div className="relative hidden max-w-sm flex-1 md:block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search tasks…"
-              className="h-9 w-full rounded-md border border-input bg-background/60 pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
-            />
-          </div>
+          <GlobalTaskSearch />
 
-          <div className="flex-1 md:hidden" />
-
-          <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
-            <Bell className="size-5" />
-            <span className="absolute right-2 top-2 size-2 rounded-full bg-destructive ring-2 ring-background" />
-          </Button>
-
-          <DropdownMenu>
+          <div className="ml-auto flex shrink-0 items-center">
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 transition-colors hover:bg-accent">
                 <Avatar className="size-8">
@@ -199,12 +212,29 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-7xl animate-fade-in">{children}</div>
         </main>
       </div>
+
+      {isCollapsibleSidebar && !showDesktopSidebar && (
+        <button
+          type="button"
+          onClick={onToggleDesktopSidebar}
+          aria-label="Open sidebar"
+          aria-expanded={false}
+          className={cn(
+            "fixed z-50 hidden size-12 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-lg",
+            "transition-all hover:scale-105 hover:bg-accent hover:shadow-xl",
+            "left-4 top-20 md:flex",
+          )}
+        >
+          <PanelLeft className="size-5" />
+        </button>
+      )}
     </div>
   );
 }

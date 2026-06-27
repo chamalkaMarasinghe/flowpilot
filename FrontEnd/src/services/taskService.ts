@@ -34,4 +34,9 @@ export const taskService = {
     const result = await api<{ id: string }>(`/tasks/${id}`, { method: "DELETE" });
     return result.id;
   },
+
+  async searchTasks(q: string): Promise<Task[]> {
+    const params = new URLSearchParams({ q: q.trim() });
+    return api<Task[]>(`/search/tasks?${params}`);
+  },
 };

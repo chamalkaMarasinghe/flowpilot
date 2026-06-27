@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { AuthUser } from "@/types";
 import { setToken } from "@/services/apiClient";
 import type { AuthState } from "./authTypes";
-import { hydrateSession, loginUser, logoutUser, registerUser } from "./authThunks";
+import { hydrateSession, loginUser, logoutUser, registerUser, updatePreferences, updateProfile } from "./authThunks";
 
 const STORAGE_KEY = "flowpilot.auth.user";
 
@@ -93,6 +93,19 @@ const authSlice = createSlice({
       s.error = null;
       persist(null);
       setToken(null);
+    });
+
+    b.addCase(updateProfile.fulfilled, (s, a) => {
+      s.user = a.payload;
+      s.hydrated = true;
+      persist(a.payload);
+    });
+
+    b.addCase(updatePreferences.fulfilled, (s, a) => {
+      if (s.user) {
+        s.user.preferences = a.payload;
+        persist(s.user);
+      }
     });
   },
 });

@@ -3,6 +3,15 @@ import { Schema, model, type InferSchemaType } from "mongoose";
 export type UserRole = "ADMIN" | "USER";
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
+const preferencesSchema = new Schema(
+  {
+    sidebarOpen: { type: Boolean, default: true },
+    tableView: { type: String, enum: ["table", "card"], default: "table" },
+    theme: { type: String, enum: ["light", "dark"], default: "light" },
+  },
+  { _id: false },
+);
+
 const userSchema = new Schema(
   {
     fullName: { type: String, required: true, trim: true },
@@ -13,6 +22,7 @@ const userSchema = new Schema(
     avatarUrl: { type: String },
     jobTitle: { type: String },
     department: { type: String },
+    preferences: { type: preferencesSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

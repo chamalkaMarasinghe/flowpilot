@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { authService } from "@/services/authService";
 import { getToken } from "@/services/apiClient";
-import type { LoginRequest, RegisterRequest } from "@/types";
+import type { LoginRequest, RegisterRequest, UpdatePreferencesRequest, UpdateProfileRequest } from "@/types";
 
 export const loginUser = createAsyncThunk("auth/login", async (req: LoginRequest, { rejectWithValue }) => {
   try {
@@ -41,3 +41,26 @@ export const hydrateSession = createAsyncThunk("auth/hydrate", async (_, { rejec
 export const logoutUser = createAsyncThunk("auth/logout", async () => {
   await authService.logout();
 });
+
+export const updateProfile = createAsyncThunk(
+  "auth/updateProfile",
+  async (req: UpdateProfileRequest, { rejectWithValue }) => {
+    try {
+      return await authService.updateProfile(req);
+    } catch (e) {
+      return rejectWithValue((e as Error).message);
+    }
+  },
+);
+
+export const updatePreferences = createAsyncThunk(
+  "auth/updatePreferences",
+  async (req: UpdatePreferencesRequest, { rejectWithValue }) => {
+    try {
+      const user = await authService.updatePreferences(req);
+      return user.preferences;
+    } catch (e) {
+      return rejectWithValue((e as Error).message);
+    }
+  },
+);

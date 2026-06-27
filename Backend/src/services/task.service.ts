@@ -5,6 +5,22 @@ import { User } from "../models/User.js";
 import { AppError } from "../utils/errors.js";
 import { toApiTask } from "../utils/toApi.js";
 import type { UserRole } from "../models/User.js";
+import {
+  buildRecentActivity,
+  computeSummary,
+  filterMyTasks,
+  filterTasksByPeriod,
+  filterTasksList,
+  getCompletionRate,
+  getDueSoonTasks,
+  getStatusChartData,
+  getStatusPipeline,
+  getTasksTrendData,
+  getUrgentTasks,
+  sortTasks,
+  type DashboardPeriod,
+  type TaskFocus,
+} from "../utils/dashboardUtils.js";
 
 const createTaskSchema = z.object({
   title: z.string().trim().min(1),
@@ -24,7 +40,20 @@ const updateTaskSchema = z.object({
   assignedTo: z.string().min(1).optional(),
 });
 
-function taskScopeFilter(userId: string, role: UserRole) {
+const listTasksQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.string().optional(),
+  priority: z.string().optional(),
+  assignedTo: z.string().optional(),
+  sort: z.enum(["dueDate", "priority", "status", "createdAt"]).optional().default("dueDate"),
+});
+
+const dashboardQuerySchema = z.object({
+  period: z.enum(["today", "week", "month", "all"]).optional().default("month"),
+  taskFocus: z.enum(["today", "upcoming"]).optional().default("today"),
+});
+
+export function taskScopeFilter(userId: string, role: UserRole) {
   if (role === "ADMIN") return {};
   return {
     $or: [{ createdBy: new Types.ObjectId(userId) }, { assignedTo: new Types.ObjectId(userId) }],
@@ -47,9 +76,16 @@ async function validateAssignee(assigneeId: string) {
   if (user.status === "INACTIVE") throw new AppError(400, "Cannot assign to inactive user");
 }
 
-export async function listTasks(userId: string, role: UserRole) {
+export async function getScopedTasks(userId: string, role: UserRole) {
   const tasks = await Task.find(taskScopeFilter(userId, role)).sort({ updatedAt: -1 });
   return tasks.map(toApiTask);
+}
+
+export async function listTasks(userId: string, role: UserRole, queryInput: unknown = {}) {
+  const query = listTasksQuerySchema.parse(queryInput);
+  const scoped = await getScopedTasks(userId, role);
+  const filtered = filterTasksList(scoped, query);
+  return sortTasks(filtered, query.sort);
 }
 
 export async function getTask(id: string, userId: string, role: UserRole) {
@@ -103,4 +139,28 @@ export async function deleteTask(id: string, userId: string, role: UserRole) {
 
   await task.deleteOne();
   return { id };
+}
+
+export async function getDashboard(userId: string, role: UserRole, queryInput: unknown = {}) {
+  const query = dashboardQuerySchema.parse(queryInput);
+  const period = query.period as DashboardPeriod;
+  const taskFocus = query.taskFocus as TaskFocus;
+
+  const scoped = await getScopedTasks(userId, role);
+  const filtered = filterTasksByPeriod(scoped, period);
+  const summary = computeSummary(filtered, userId);
+
+  return {
+    summary,
+    completionRate: getCompletionRate(filtered),
+    statusChart: getStatusChartData(filtered),
+    trend: getTasksTrendData(scoped),
+    pipeline: getStatusPipeline(filtered),
+    myTasks: filterMyTasks(scoped, userId, taskFocus),
+    dueSoon: getDueSoonTasks(filtered),
+    urgent: getUrgentTasks(filtered),
+    recentActivity: buildRecentActivity(scoped),
+    period,
+    taskFocus,
+  };
 }

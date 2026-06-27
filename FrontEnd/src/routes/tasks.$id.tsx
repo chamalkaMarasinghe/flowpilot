@@ -19,7 +19,9 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Pencil, Trash2, Calendar, User as UserIcon } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useState } from "react";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { useEffect, useState } from "react";
+import { fetchTaskById } from "@/features/tasks/taskThunks";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,10 +49,26 @@ function TaskDetailsPage() {
   const navigate = useNavigate();
   const user = useAppSelector((s) => s.auth.user)!;
   const task = useAppSelector((s) => s.tasks.items.find((t) => t.id === id));
+  const tasksLoading = useAppSelector((s) => s.tasks.loading);
   const users = useAppSelector((s) => s.users.items);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
+
+  useEffect(() => {
+    if (!task && !fetchAttempted) {
+      setFetchAttempted(true);
+      void dispatch(fetchTaskById(id));
+    }
+  }, [dispatch, id, task, fetchAttempted]);
 
   if (!task) {
+    if (!fetchAttempted || tasksLoading) {
+      return (
+        <div className="flex justify-center py-16">
+          <LoadingSpinner />
+        </div>
+      );
+    }
     return (
       <EmptyState
         title="Task not found"
@@ -109,8 +127,12 @@ function TaskDetailsPage() {
               <Select
                 value={task.status}
                 onValueChange={async (v) => {
-                  await dispatch(updateTask({ id: task.id, req: { status: v as TaskStatus } }));
-                  toast.success(`Moved to ${STATUS_LABEL[v as TaskStatus]}`);
+                  try {
+                    await dispatch(updateTask({ id: task.id, req: { status: v as TaskStatus } })).unwrap();
+                    toast.success(`Moved to ${STATUS_LABEL[v as TaskStatus]}`);
+                  } catch (err) {
+                    toast.error((err as Error).message ?? "Failed to update status");
+                  }
                 }}
               >
                 <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
@@ -157,9 +179,13 @@ function TaskDetailsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
-                await dispatch(deleteTask(task.id));
-                toast.success("Task deleted");
-                navigate({ to: "/tasks" });
+                try {
+                  await dispatch(deleteTask(task.id)).unwrap();
+                  toast.success("Task deleted");
+                  navigate({ to: "/tasks" });
+                } catch (err) {
+                  toast.error((err as Error).message ?? "Failed to delete task");
+                }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

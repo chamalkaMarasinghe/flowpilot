@@ -99,13 +99,72 @@ async function run() {
       throw new Error(`Users fetch failed: ${JSON.stringify(users.body)}`);
     }
 
-    const userLogin = await request<{ token: string }>(baseUrl, "/api/auth/login", {
+    const dashboard = await request<Record<string, unknown>>(baseUrl, "/api/dashboard?period=month&taskFocus=today", {
+      headers: authHeaders,
+    });
+    if (dashboard.status !== 200 || !dashboard.body.success || !dashboard.body.data?.summary) {
+      throw new Error(`Dashboard fetch failed: ${JSON.stringify(dashboard.body)}`);
+    }
+
+    const filteredTasks = await request<unknown[]>(baseUrl, "/api/tasks?status=OPEN&sort=priority", {
+      headers: authHeaders,
+    });
+    if (filteredTasks.status !== 200 || !filteredTasks.body.success) {
+      throw new Error(`Filtered tasks failed: ${JSON.stringify(filteredTasks.body)}`);
+    }
+
+    const userLogin = await request<{ user: { id: string }; token: string }>(baseUrl, "/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email: "user@flowpilot.com", password: "User@123" }),
     });
     const userToken = userLogin.body.data!.token;
+    const creatorId = userLogin.body.data!.user.id;
+    const userHeaders = { Authorization: `Bearer ${userToken}` };
+
+    const userList = await request<Array<{ id: string }>>(baseUrl, "/api/users", { headers: userHeaders });
+    const assigneeId = (userList.body.data as Array<{ id: string }>)[0]?.id;
+    if (!assigneeId) throw new Error("No users for assignee");
+
+    const dueDate = new Date(Date.now() + 86400000 * 3).toISOString();
+    const created = await request<{ id: string; createdBy: string; assignedTo: string }>(baseUrl, "/api/tasks", {
+      method: "POST",
+      headers: userHeaders,
+      body: JSON.stringify({
+        title: "Integration test task",
+        description: "Created via API test",
+        priority: "MEDIUM",
+        status: "OPEN",
+        dueDate,
+        assignedTo: assigneeId,
+      }),
+    });
+    if (created.status !== 201 || !created.body.success || !created.body.data?.id) {
+      throw new Error(`Task create failed: ${JSON.stringify(created.body)}`);
+    }
+    const taskId = created.body.data.id;
+    if (created.body.data.createdBy !== creatorId) {
+      throw new Error("createdBy must match authenticated user");
+    }
+
+    const patched = await request<{ status: string }>(baseUrl, `/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: userHeaders,
+      body: JSON.stringify({ status: "IN_PROGRESS" }),
+    });
+    if (patched.status !== 200 || patched.body.data?.status !== "IN_PROGRESS") {
+      throw new Error(`Task patch failed: ${JSON.stringify(patched.body)}`);
+    }
+
+    const deleted = await request<{ id: string }>(baseUrl, `/api/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: userHeaders,
+    });
+    if (deleted.status !== 200 || deleted.body.data?.id !== taskId) {
+      throw new Error(`Task delete failed: ${JSON.stringify(deleted.body)}`);
+    }
+
     const scopedTasks = await request<unknown[]>(baseUrl, "/api/tasks", {
-      headers: { Authorization: `Bearer ${userToken}` },
+      headers: userHeaders,
     });
     if (scopedTasks.status !== 200 || !scopedTasks.body.success) {
       throw new Error(`Scoped tasks failed: ${JSON.stringify(scopedTasks.body)}`);
@@ -123,7 +182,10 @@ async function run() {
     console.log(`- Admin login + /me OK`);
     console.log(`- Tasks OK, ${tasks.body.data!.length} task(s)`);
     console.log(`- Users OK, ${users.body.data!.length} user(s)`);
-    console.log(`- User scoped tasks OK, ${scopedTasks.body.data!.length} task(s)`);
+    console.log(`- Dashboard OK, ${(dashboard.body.data as { summary: { totalTasks: number } }).summary.totalTasks} task(s) in summary`);
+    console.log(`- Filtered tasks OK, ${(filteredTasks.body.data as unknown[]).length} OPEN task(s)`);
+    console.log(`- Task CRUD OK (create → patch → delete)`);
+    console.log(`- User scoped tasks OK, ${(scopedTasks.body.data as unknown[]).length} task(s)`);
     console.log(`- Error envelope OK on invalid login`);
   } finally {
     server?.close();

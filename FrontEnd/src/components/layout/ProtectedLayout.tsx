@@ -14,13 +14,14 @@ export function ProtectedLayout({ children, requireAdmin }: Props) {
   const user = useAppSelector((s) => s.auth.user);
   const hydrated = useAppSelector((s) => s.auth.hydrated);
   const dispatch = useAppDispatch();
-  const tasksLoaded = useAppSelector((s) => s.tasks.items.length > 0 || s.tasks.loading);
+  const tasksFetched = useAppSelector((s) => s.tasks.fetched);
+  const tasksLoading = useAppSelector((s) => s.tasks.loading);
   const usersLoaded = useAppSelector((s) => s.users.items.length > 0 || s.users.loading);
 
   useEffect(() => {
-    if (user && !tasksLoaded) void dispatch(fetchTasks());
+    if (user && !tasksFetched && !tasksLoading) void dispatch(fetchTasks());
     if (user && !usersLoaded) void dispatch(fetchUsers());
-  }, [user, tasksLoaded, usersLoaded, dispatch]);
+  }, [user, tasksFetched, tasksLoading, usersLoaded, dispatch]);
 
   if (!hydrated) return null;
   if (!user) return <Navigate to="/login" />;

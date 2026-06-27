@@ -70,6 +70,46 @@ const options: swaggerJsdoc.Options = {
             updatedAt: { type: "string", format: "date-time" },
           },
         },
+        DashboardSummary: {
+          type: "object",
+          properties: {
+            totalTasks: { type: "integer" },
+            openTasks: { type: "integer" },
+            inProgressTasks: { type: "integer" },
+            testingTasks: { type: "integer" },
+            doneTasks: { type: "integer" },
+            overdueTasks: { type: "integer" },
+            assignedToMe: { type: "integer" },
+            highPriorityTasks: { type: "integer" },
+          },
+        },
+        ActivityLog: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            type: { type: "string" },
+            message: { type: "string" },
+            taskId: { type: "string" },
+            userId: { type: "string" },
+            createdAt: { type: "string", format: "date-time" },
+          },
+        },
+        DashboardData: {
+          type: "object",
+          properties: {
+            summary: { $ref: "#/components/schemas/DashboardSummary" },
+            completionRate: { type: "number" },
+            statusChart: { type: "array", items: { type: "object" } },
+            trend: { type: "array", items: { type: "object" } },
+            pipeline: { type: "array", items: { type: "object" } },
+            myTasks: { type: "array", items: { $ref: "#/components/schemas/Task" } },
+            dueSoon: { type: "array", items: { $ref: "#/components/schemas/Task" } },
+            urgent: { type: "array", items: { $ref: "#/components/schemas/Task" } },
+            recentActivity: { type: "array", items: { $ref: "#/components/schemas/ActivityLog" } },
+            period: { type: "string", enum: ["today", "week", "month", "all"] },
+            taskFocus: { type: "string", enum: ["today", "upcoming"] },
+          },
+        },
         User: {
           type: "object",
           properties: {

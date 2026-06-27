@@ -101,9 +101,10 @@ export function KanbanBoard({ tasks, users }: Props) {
     if (!destCol) return;
     const task = tasks.find((t) => t.id === id);
     if (!task || task.status === destCol) return;
-    void dispatch(updateTask({ id, req: { status: destCol } })).then(() =>
-      toast.success(`Moved to ${STATUS_LABEL[destCol]}`),
-    );
+    void dispatch(updateTask({ id, req: { status: destCol } }))
+      .unwrap()
+      .then(() => toast.success(`Moved to ${STATUS_LABEL[destCol]}`))
+      .catch((err: Error) => toast.error(err.message ?? "Failed to update task"));
   };
 
   return (

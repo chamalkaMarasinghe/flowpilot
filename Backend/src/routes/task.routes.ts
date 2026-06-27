@@ -11,11 +11,27 @@ router.use(authenticate);
  * /tasks:
  *   get:
  *     tags: [Tasks]
- *     summary: List tasks (scoped by role)
+ *     summary: List tasks scoped by role with optional filter and sort
  *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [OPEN, IN_PROGRESS, TESTING, DONE, ALL] }
+ *       - in: query
+ *         name: priority
+ *         schema: { type: string, enum: [LOW, MEDIUM, HIGH, ALL] }
+ *       - in: query
+ *         name: assignedTo
+ *         schema: { type: string }
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, enum: [dueDate, priority, status, createdAt], default: dueDate }
  *   post:
  *     tags: [Tasks]
- *     summary: Create a task
+ *     summary: Create a task (createdBy set from JWT)
  *     security: [{ bearerAuth: [] }]
  */
 router.get("/", taskController.listTasks);

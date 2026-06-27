@@ -111,6 +111,54 @@ export interface DashboardSummary {
   highPriorityTasks: number;
 }
 
+export type DashboardPeriod = "today" | "week" | "month" | "all";
+export type TaskFocus = "today" | "upcoming";
+
+export interface StatusChartDatum {
+  status: TaskStatus;
+  label: string;
+  value: number;
+  fill: string;
+}
+
+export interface TrendDatum {
+  label: string;
+  created: number;
+  completed: number;
+}
+
+export interface PipelineRow {
+  status: TaskStatus;
+  label: string;
+  count: number;
+  percent: number;
+  color: string;
+}
+
+export interface DashboardData {
+  summary: DashboardSummary;
+  completionRate: number;
+  statusChart: StatusChartDatum[];
+  trend: TrendDatum[];
+  pipeline: PipelineRow[];
+  myTasks: Task[];
+  dueSoon: Task[];
+  urgent: Task[];
+  recentActivity: ActivityLog[];
+  period: DashboardPeriod;
+  taskFocus: TaskFocus;
+}
+
+export type TaskSortKey = "dueDate" | "priority" | "status" | "createdAt";
+
+export interface TaskListQuery {
+  search?: string;
+  status?: TaskStatus | "ALL";
+  priority?: TaskPriority | "ALL";
+  assignedTo?: string | "ALL";
+  sort?: TaskSortKey;
+}
+
 export interface UIState {
   sidebarOpen: boolean;
   theme: "light" | "dark";

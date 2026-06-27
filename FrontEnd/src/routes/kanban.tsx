@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { PageHeader } from "@/components/common/PageHeader";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
+import { fetchTasks } from "@/features/tasks/taskThunks";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
 export const Route = createFileRoute("/kanban")({
   head: () => ({ meta: [{ title: "Kanban — FlowPilot" }] }),
@@ -16,12 +19,23 @@ export const Route = createFileRoute("/kanban")({
 });
 
 function KanbanPage() {
-  const user = useAppSelector((s) => s.auth.user)!;
-  const allTasks = useAppSelector((s) => s.tasks.items);
+  const dispatch = useAppDispatch();
+  const tasks = useAppSelector((s) => s.tasks.items);
+  const loading = useAppSelector((s) => s.tasks.loading);
+  const fetched = useAppSelector((s) => s.tasks.fetched);
   const users = useAppSelector((s) => s.users.items);
-  const scoped = user.role === "ADMIN"
-    ? allTasks
-    : allTasks.filter((t) => t.createdBy === user.id || t.assignedTo === user.id);
+
+  useEffect(() => {
+    void dispatch(fetchTasks());
+  }, [dispatch]);
+
+  if (loading && !fetched) {
+    return (
+      <div className="flex justify-center py-16">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -36,7 +50,7 @@ function KanbanPage() {
           </Link>
         }
       />
-      <KanbanBoard tasks={scoped} users={users} />
+      <KanbanBoard tasks={tasks} users={users} />
     </>
   );
 }

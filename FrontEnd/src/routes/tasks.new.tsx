@@ -28,13 +28,16 @@ function NewTaskPage() {
       <Card className="p-6">
         <TaskForm
           users={users}
+          defaultAssigneeId={user.id}
           submitLabel="Create task"
           onCancel={() => navigate({ to: "/tasks" })}
           onSubmit={async (values) => {
-            const res = await dispatch(createTask({ req: values, createdBy: user.id }));
+            const res = await dispatch(createTask(values));
             if (createTask.fulfilled.match(res)) {
               toast.success("Task created");
               navigate({ to: "/tasks/$id", params: { id: res.payload.id } });
+            } else {
+              toast.error((res.payload as string) ?? "Failed to create task");
             }
           }}
         />

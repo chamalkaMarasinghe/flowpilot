@@ -16,18 +16,22 @@ import { ALL_PRIORITIES, ALL_STATUSES, PRIORITY_LABEL, STATUS_LABEL } from "@/ut
 interface Props {
   initial?: Task;
   users: User[];
+  defaultAssigneeId?: string;
   submitLabel?: string;
   onCancel?: () => void;
   onSubmit: (values: CreateTaskRequest) => void | Promise<void>;
 }
 
-export function TaskForm({ initial, users, onSubmit, onCancel, submitLabel = "Save" }: Props) {
+export function TaskForm({ initial, users, defaultAssigneeId, onSubmit, onCancel, submitLabel = "Save" }: Props) {
+  const activeUsers = users.filter((u) => u.status === "ACTIVE");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [priority, setPriority] = useState<TaskPriority>(initial?.priority ?? "MEDIUM");
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? "OPEN");
   const [dueDate, setDueDate] = useState(initial?.dueDate?.slice(0, 10) ?? "");
-  const [assignedTo, setAssignedTo] = useState(initial?.assignedTo ?? users[0]?.id ?? "");
+  const [assignedTo, setAssignedTo] = useState(
+    initial?.assignedTo ?? defaultAssigneeId ?? activeUsers[0]?.id ?? "",
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -109,7 +113,7 @@ export function TaskForm({ initial, users, onSubmit, onCancel, submitLabel = "Sa
           <Select value={assignedTo} onValueChange={setAssignedTo}>
             <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
             <SelectContent>
-              {users.map((u) => (
+              {activeUsers.map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
               ))}
             </SelectContent>

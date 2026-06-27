@@ -4,7 +4,7 @@ import * as taskService from "../services/task.service.js";
 import { sendSuccess } from "../utils/response.js";
 
 export const listTasks = asyncHandler(async (req: Request, res: Response) => {
-  const tasks = await taskService.listTasks(req.user!.id, req.user!.role);
+  const tasks = await taskService.listTasks(req.user!.id, req.user!.role, req.query);
   sendSuccess(res, tasks, "Tasks retrieved");
 });
 

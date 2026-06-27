@@ -1,4 +1,5 @@
 import type { Document, Types } from "mongoose";
+import type { ApiTaskShape } from "./dashboardUtils.js";
 
 type WithId = { _id: Types.ObjectId };
 
@@ -37,11 +38,11 @@ export function toApiAuthUser<T extends Document & WithId>(doc: T) {
   return auth;
 }
 
-export function toApiTask<T extends Document & WithId>(doc: T) {
+export function toApiTask<T extends Document & WithId>(doc: T): ApiTaskShape {
   const obj = doc.toObject({ virtuals: false });
   const { _id, createdBy, assignedTo, dueDate, ...rest } = obj as Record<string, unknown>;
   return {
-    ...rest,
+    ...(rest as Omit<ApiTaskShape, "id" | "createdBy" | "assignedTo" | "dueDate" | "createdAt" | "updatedAt">),
     id: String(_id),
     createdBy: toId(createdBy as Types.ObjectId),
     assignedTo: toId(assignedTo as Types.ObjectId),

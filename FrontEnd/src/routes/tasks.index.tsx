@@ -11,9 +11,11 @@ import { Plus, LayoutGrid, Rows3 } from "lucide-react";
 import { setTableView } from "@/features/ui/uiSlice";
 import { deleteTask } from "@/features/tasks/taskThunks";
 import { toast } from "sonner";
-import type { TaskFilters as Filters } from "@/types";
+import type { TaskFilters as Filters, TaskSortKey } from "@/types";
+import { filterAndSortTasks } from "@/utils/taskUtils";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ListChecks } from "lucide-react";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,55 +43,33 @@ export const Route = createFileRoute("/tasks/")({
   ),
 });
 
-type SortKey = "dueDate" | "priority" | "status" | "createdAt";
-
-const PRIORITY_RANK = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
-const STATUS_RANK = { OPEN: 0, IN_PROGRESS: 1, TESTING: 2, DONE: 3 } as const;
-
 function TasksPage() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user)!;
   const allTasks = useAppSelector((s) => s.tasks.items);
+  const loading = useAppSelector((s) => s.tasks.loading);
+  const fetched = useAppSelector((s) => s.tasks.fetched);
   const users = useAppSelector((s) => s.users.items);
   const view = useAppSelector((s) => s.ui.tableView);
 
   const [filters, setFilters] = useState<Filters>({ search: "", status: "ALL", priority: "ALL", assignedTo: "ALL" });
-  const [sort, setSort] = useState<SortKey>("dueDate");
+  const [sort, setSort] = useState<TaskSortKey>("dueDate");
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  const visible = useMemo(() => {
-    let list = user.role === "ADMIN"
-      ? allTasks
-      : allTasks.filter((t) => t.createdBy === user.id || t.assignedTo === user.id);
-
-    if (filters.search.trim()) {
-      const q = filters.search.toLowerCase();
-      list = list.filter((t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
-    }
-    if (filters.status && filters.status !== "ALL") list = list.filter((t) => t.status === filters.status);
-    if (filters.priority && filters.priority !== "ALL") list = list.filter((t) => t.priority === filters.priority);
-    if (filters.assignedTo && filters.assignedTo !== "ALL") list = list.filter((t) => t.assignedTo === filters.assignedTo);
-
-    list = [...list].sort((a, b) => {
-      switch (sort) {
-        case "dueDate":
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        case "createdAt":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case "priority":
-          return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
-        case "status":
-          return STATUS_RANK[a.status] - STATUS_RANK[b.status];
-      }
-    });
-    return list;
-  }, [allTasks, user, filters, sort]);
+  const visible = useMemo(
+    () => filterAndSortTasks(allTasks, filters, sort),
+    [allTasks, filters, sort],
+  );
 
   const onDelete = async () => {
     if (!confirmId) return;
-    await dispatch(deleteTask(confirmId));
-    toast.success("Task deleted");
-    setConfirmId(null);
+    const res = await dispatch(deleteTask(confirmId));
+    if (deleteTask.fulfilled.match(res)) {
+      toast.success("Task deleted");
+      setConfirmId(null);
+    } else {
+      toast.error((res.payload as string) ?? "Failed to delete task");
+    }
   };
 
   const canEdit = (taskCreatorId: string, assignee: string) =>
@@ -102,7 +82,7 @@ function TasksPage() {
         description={user.role === "ADMIN" ? "All tasks across the workspace" : "Tasks you created or that are assigned to you"}
         actions={
           <>
-            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+            <Select value={sort} onValueChange={(v) => setSort(v as TaskSortKey)}>
               <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="dueDate">Sort: Due date</SelectItem>
@@ -138,7 +118,11 @@ function TasksPage() {
 
       <TaskFilters filters={filters} onChange={setFilters} users={users} />
 
-      {visible.length === 0 ? (
+      {loading && !fetched ? (
+        <div className="flex justify-center py-16">
+          <LoadingSpinner />
+        </div>
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={<ListChecks className="size-10" />}
           title="No tasks found"

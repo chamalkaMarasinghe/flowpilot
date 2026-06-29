@@ -76,7 +76,3 @@ bun install        # or npm install
 bun run dev        # start the dev server
 bun run build      # production build
 ```
-
-## Future API integration
-
-Each thunk calls a service in `src/services/*` which currently delegates to `mockApi.ts`. To wire a real backend, replace the body of each service method with a `fetch(env.API_BASE_URL + ...)` call — the slices/thunks stay unchanged.
